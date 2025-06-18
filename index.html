@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat sobre vídeo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body, html {
+            height: 100%;
+            font-family: Arial, sans-serif;
+        }
+
+        /* Container principal do vídeo */
+        .video-background {
+            position: relative;
+            height: 100%;
+            width: 100%;
+            overflow: hidden;
+        }
+
+        /* Vídeo em tela cheia com ajuste responsivo */
+        .video-background video {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            object-position: center;
+            z-index: -1;
+        }
+
+        /* Avatar e bolinha "Ao Vivo" */
+        .avatar-container {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            display: flex;
+            align-items: center;
+        }
+
+        .avatar-container img {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            border: 2px solid white;
+        }
+
+        .live-badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: red;
+            color: white;
+            font-size: 14px;
+            font-weight: bold;
+            padding: 5px 10px;
+            border-radius: 20px;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 5px red;
+            }
+            50% {
+                box-shadow: 0 0 20px red;
+            }
+            100% {
+                box-shadow: 0 0 5px red;
+            }
+        }
+
+        /* Container de mensagens */
+        .chat-container {
+            position: absolute;
+            bottom: 80px;
+            width: 100%;
+            padding: 0 20px;
+            z-index: 10;
+        }
+
+        /* Estilos gerais das mensagens */
+        .chat-message {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            margin: 10px 0;
+            max-width: 70%;
+            border-radius: 20px;
+            opacity: 0;
+            animation: slide-up 5s ease-in-out forwards;
+            word-wrap: break-word;
+        }
+
+        /* Mensagens da pessoa do vídeo (esquerda) */
+        .chat-message.left {
+            background-color: rgba(60, 60, 60, 0.8);
+            justify-content: flex-start;
+            color: white;
+        }
+
+        /* Mensagens do usuário (direita) */
+        .chat-message.right {
+            background-color: #E6005C;
+            color: white;
+            justify-content: flex-end;
+            margin-left: auto;
+            word-wrap: break-word;
+        }
+
+        /* Animação de aparecer e desaparecer */
+        @keyframes slide-up {
+            0% {
+                transform: translateY(30px);
+                opacity: 0;
+            }
+            20% {
+                transform: translateY(0);
+                opacity: 1;
+            }
+            80% {
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(-30px);
+                opacity: 0;
+            }
+        }
+
+        /* Campo de mensagem e botão de envio */
+        .message-container {
+            position: absolute;
+            bottom: 10px;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 0 20px;
+            box-sizing: border-box;
+        }
+
+        .message-container input {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            border-radius: 20px;
+            font-size: 16px;
+            background-color: #fff;
+            outline: none;
+        }
+
+        .message-container button {
+            background-color: #E6005C;
+            border: none;
+            border-radius: 20px;
+            padding: 10px 20px;
+            margin-left: 10px;
+            cursor: pointer;
+            font-size: 16px;
+            color: white;
+        }
+		
+    </style>
+</head>
+<body>
+
+    <div class="video-background">
+        <!-- Vídeo de fundo -->
+        <video id="callVideo" autoplay muted playsinline>
+            <source src="https://s3.meucanalvip.org/previa/videocam1.mp4" type="video/mp4">
+            Seu navegador não suporta o vídeo.
+        </video>
+		
+        <!-- Avatar na esquerda -->
+        <div class="avatar-container">
+            <img src="https://s3.x-million.org/instagram/fotoperfil.jpg" alt="Avatar de perfil">
+        </div>
+
+        <!-- "Ao Vivo" na direita -->
+        <div class="live-badge">Ao Vivo</div>
+
+        <!-- Container de chat -->
+        <div class="chat-container" id="chatContainer"></div>
+
+        <!-- Campo de mensagem e botão de envio -->
+        <div class="message-container">
+            <input type="text" id="messageInput" placeholder="Mensagem">
+            <button onclick="sendMessage()">Enviar</button>
+        </div>
+    </div>
+
+    <script>
+        const chatContainer = document.getElementById('chatContainer');
+        const callVideo = document.getElementById('callVideo');
+        let messageShown = {};
+
+        // Função para exibir uma mensagem no chat
+        function showChatMessage(sender, message, position) {
+            const chatMessage = document.createElement('div');
+            chatMessage.classList.add('chat-message', position);
+
+            chatMessage.innerHTML = `<div class="text"><strong>${sender}:</strong> ${message}</div>`;
+            chatContainer.appendChild(chatMessage);
+
+            // Remover a mensagem após 5 segundos
+            setTimeout(() => {
+                chatMessage.remove();
+            }, 5000);
+        }
+
+        // Função para enviar mensagem do usuário
+        function sendMessage() {
+            const messageInput = document.getElementById('messageInput');
+            const message = messageInput.value;
+            if (message.trim() !== "") {
+                showChatMessage('Você', message, 'right');
+                messageInput.value = ''; // Limpar o campo de mensagem
+            }
+        }
+
+		// Função para obter a saudação com base no horário atual
+function getSaudacao() {
+    const horaAtual = new Date().getHours();
+    if (horaAtual >= 0 && horaAtual < 4) {
+        return 'acordado essa hora? rs'; // Das 00:00 até 03:59
+    } else if (horaAtual < 12) {
+        return 'bom dia'; // Das 04:00 até 11:59
+    } else if (horaAtual < 18) {
+        return 'boa tarde'; // Das 12:00 até 17:59
+    } else {
+        return 'boa noite'; // Das 18:00 até 23:59
+    }
+}
+
+        // Monitorar o tempo do vídeo e mostrar as mensagens de chat no momento correto
+        callVideo.addEventListener('timeupdate', () => {
+            const currentTime = callVideo.currentTime;
+			
+if (currentTime >= 14 && !messageShown.message1) {
+    const saudacao = getSaudacao(); // Obtém a saudação dinamicamente
+    showChatMessage('Roberta', `Oi amor, ${saudacao}`, 'left');
+    messageShown.message1 = true;
+}
+if (currentTime >= 16 && !messageShown.message2) {
+    showChatMessage('Roberta', 'Ta aí?? deu certo de você entrar?', 'left');
+    messageShown.message2 = true;
+}
+if (currentTime >= 23 && !messageShown.message3) {
+    showChatMessage('Roberta', 'Perai que já vou ligar a minha câmera de novo, tá?', 'left');
+    messageShown.message3 = true;
+}
+if (currentTime >= 30 && !messageShown.message4) {
+    showChatMessage('Roberta', 'to no meu quarto, assim fico mais "a vontade" rs 😈', 'left');
+    messageShown.message4 = true;
+}
+if (currentTime >= 37 && !messageShown.message5) {
+    showChatMessage('Roberta', 'Não to sozinha em casa :P', 'left');
+    messageShown.message5 = true;
+}
+if (currentTime >= 44 && !messageShown.message6) {
+    showChatMessage('Roberta', 'Fica bem duro pra mim, bem gostoso', 'left');
+    messageShown.message6 = true;
+}
+if (currentTime >= 51 && !messageShown.message7) {
+    showChatMessage('Roberta', 'Pra eu chupar tudinho tá?', 'left');
+    messageShown.message7 = true;
+}
+if (currentTime >= 58 && !messageShown.message8) {
+    showChatMessage('Roberta', 'To indo trancar a porta, peraaai', 'left');
+    messageShown.message8 = true;
+}
+if (currentTime >= 65 && !messageShown.message9) {
+    showChatMessage('Roberta', 'por um pano embaixo da porta pra ninguem desconfiar rs 👀', 'left');
+    messageShown.message9 = true;
+}
+if (currentTime >= 70 && !messageShown.message10) {
+    showChatMessage('Roberta', 'vou ficar molhadinha pra vc', 'left');
+    messageShown.message10 = true;
+}
+
+// A partir da mensagem 11, aplicando um intervalo de 5 segundos
+if (currentTime >= 198 && !messageShown.message11) {
+    showChatMessage('Roberta', 'Tá me vendo?', 'left');
+    messageShown.message11 = true;
+}
+if (currentTime >= 200 && !messageShown.message12) {
+    showChatMessage('Roberta', 'minha internet tinha caido, desculpa', 'left');
+    messageShown.message12 = true;
+}
+if (currentTime >= 303 && !messageShown.message13) {
+    showChatMessage('Roberta', 'Gozou amor?', 'left');
+    messageShown.message13 = true;
+}
+if (currentTime >= 309 && !messageShown.message14) {
+    showChatMessage('Roberta', 'Amor vou ter que sair aqui', 'left');
+    messageShown.message14 = true;
+}
+if (currentTime >= 317 && !messageShown.message15) {
+    showChatMessage('Roberta', 'minha amiga da faculdade ta aqui em casa', 'left');
+    messageShown.message15 = true;
+}
+if (currentTime >= 323 && !messageShown.message16) {
+    showChatMessage('Roberta', 'e ela me chamou', 'left');
+    messageShown.message16 = true;
+}
+if (currentTime >= 330 && !messageShown.message17) {
+    showChatMessage('Roberta', 'vou ter que sair, aff 😓', 'left');
+    messageShown.message17 = true;
+}
+if (currentTime >= 339 && !messageShown.message18) {
+    showChatMessage('Roberta', 'mas eu volto dps, prometo', 'left');
+    messageShown.message18 = true;
+}
+if (currentTime >= 347 && !messageShown.message19) {
+    showChatMessage('Roberta', 'Ai continuamos bem gostoso, eu qria ficar mais', 'left');
+    messageShown.message19 = true;
+}
+if (currentTime >= 354 && !messageShown.message20) {
+    showChatMessage('Roberta', 'porém ela vai desconfiar kkk', 'left');
+    messageShown.message20 = true;
+}
+if (currentTime >= 362 && !messageShown.message21) {
+    showChatMessage('Roberta', 'vamos combinar la pelo zap a próxima chamada', 'left');
+    messageShown.message21 = true;
+}
+if (currentTime >= 370 && !messageShown.message22) {
+    showChatMessage('Roberta', 'Que eu faço o que você quiser', 'left');
+    messageShown.message22 = true;
+}
+if (currentTime >= 377 && !messageShown.message23) {
+    showChatMessage('Roberta', 'e vc liga a cam pra mim', 'left');
+    messageShown.message23 = true;
+}
+if (currentTime >= 384 && !messageShown.message24) {
+    showChatMessage('Roberta', 'ja fiquei toda molhadinha aqui, na proxima vc liga a cam pra mim', 'left');
+    messageShown.message24 = true;
+}
+if (currentTime >= 392 && !messageShown.message25) {
+    showChatMessage('Roberta', 'qro ver seu pau, todo duro pra mim', 'left');
+    messageShown.message25 = true;
+}
+if (currentTime >= 401 && !messageShown.message26) {
+    showChatMessage('Roberta', 'Ai na proxima habilito a função pra eu te ver tbm, tá?', 'left');
+    messageShown.message26 = true;
+}
+if (currentTime >= 409 && !messageShown.message27) {
+    showChatMessage('Roberta', 'me manda dps la no zap qnd vc pode?', 'left');
+    messageShown.message27 = true;
+}
+if (currentTime >= 419 && !messageShown.message28) {
+    showChatMessage('Roberta', 'desculpa msm, eu combinei de sair com ela', 'left');
+    messageShown.message28 = true;
+}
+if (currentTime >= 427 && !messageShown.message29) {
+    showChatMessage('Roberta', 'e tinha esquecido, mas n vou demorar n', 'left');
+    messageShown.message29 = true;
+}
+if (currentTime >= 437 && !messageShown.message30) {
+    showChatMessage('Roberta', 'pensa em mim taa ❤️', 'left');
+    messageShown.message30 = true;
+}
+if (currentTime >= 445 && !messageShown.message31) {
+    showChatMessage('Roberta', 'voltando vou gozar bem gostoso pra voce 😏😈', 'left');
+    messageShown.message31 = true;
+}
+if (currentTime >= 453 && !messageShown.message32) {
+    showChatMessage('Roberta', 'Vou adorar ver seu pau bem duro pra mim, sabia?', 'left');
+    messageShown.message32 = true;
+}
+if (currentTime >= 462 && !messageShown.message33) {
+    showChatMessage('Roberta', 'vou rebolar bem gostoso pra vc, pra vc me ver quicando', 'left');
+    messageShown.message33 = true;
+}
+if (currentTime >= 472 && !messageShown.message34) {
+    showChatMessage('Roberta', 'vou precisar ir aqui amor, me chama no zap', 'left');
+    messageShown.message34 = true;
+}
+if (currentTime >= 478 && !messageShown.message35) {
+    showChatMessage('Roberta', 'Vou indo, nos vemos em breve, tá? ❤️', 'left');
+    messageShown.message35 = true;
+}
+
+// Certifique-se de fechar o evento 'timeupdate' corretamente
+});
+
+// Redireciona para uma página específica ao término do vídeo
+callVideo.addEventListener('ended', () => {
+    window.location.href = "https://robertacanal.vercel.app";
+});
+</script>
+
+</body>
+</html>
+
+
